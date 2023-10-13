@@ -106,8 +106,9 @@ unzip 360_v2.zip
 accelerate config
 
 # Where your data is 
-DATA_DIR=data/360_v2/bicycle
-EXP_NAME=360_v2/bicycle
+DATA_DIR=my_data/statue_0914
+EXP_NAME=statue_0914_1013
+PATH_DIR=my_data/statue_0914/path
 
 # Experiment will be conducted under "exp/${EXP_NAME}" folder
 # "--gin_configs=configs/360.gin" can be seen as a default config 
@@ -116,14 +117,15 @@ accelerate launch train.py \
     --gin_configs=configs/360.gin \
     --gin_bindings="Config.data_dir = '${DATA_DIR}'" \
     --gin_bindings="Config.exp_name = '${EXP_NAME}'" \
-    --gin_bindings="Config.factor = 4"
+    --gin_bindings="Config.factor = 4"      
 
 # or you can also run without accelerate (without DDP)
 CUDA_VISIBLE_DEVICES=0 python train.py \
     --gin_configs=configs/360.gin \
     --gin_bindings="Config.data_dir = '${DATA_DIR}'" \
     --gin_bindings="Config.exp_name = '${EXP_NAME}'" \
-      --gin_bindings="Config.factor = 4" 
+    --gin_bindings="Config.factor = 4" \
+    --gin_bindings="render_spline_keyframes = '${PATH_DIR}'" 
 
 # alternatively you can use an example training script 
 bash scripts/train_360.sh
@@ -139,14 +141,19 @@ tensorboard --logdir "exp/${EXP_NAME}"
 ### Render
 Rendering results can be found in the directory `exp/${EXP_NAME}/render`
 ```
+
+DATA_DIR=my_data/statue_0914
+EXP_NAME=statue_0914_1013
+PATH_DIR=my_data/statue_0914/path
 accelerate launch render.py \
     --gin_configs=configs/360.gin \
     --gin_bindings="Config.data_dir = '${DATA_DIR}'" \
     --gin_bindings="Config.exp_name = '${EXP_NAME}'" \
     --gin_bindings="Config.render_path = True" \
-    --gin_bindings="Config.render_path_frames = 480" \
-    --gin_bindings="Config.render_video_fps = 60" \
-    --gin_bindings="Config.factor = 4"  
+    --gin_bindings="Config.render_path_frames = 180" \
+    --gin_bindings="Config.render_video_fps = 30" \
+    --gin_bindings="Config.factor = 4" \
+    --gin_bindings="render_spline_keyframes = 'my_data/statue_0914/path'" 
 
 # alternatively you can use an example rendering script 
 bash scripts/render_360.sh
@@ -202,7 +209,11 @@ or use more GPU by configure `accelerate config` .
 ## Preparing custom data
 More details can be found at https://github.com/google-research/multinerf
 ```
-DATA_DIR=my_dataset_dir
+
+#ldd /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/libfreeimage.so.3
+
+sudo ln -sf /usr/lib/x86_64-linux-gnu/libjpeg.so.8.2.2 /usr/local/lib/libjpeg.so.8
+DATA_DIR=my_data/statue_0914
 bash scripts/local_colmap_and_resize.sh ${DATA_DIR}
 ```
 

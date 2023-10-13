@@ -119,12 +119,12 @@ def cast_rays(tdist, origins, directions, cam_dirs, radii, rand=True, n=7, m=3, 
     deg = torch.pi / 3 * torch.tensor([0, 2, 4, 3, 5, 1], device=tdist.device, dtype=torch.float)
     deg = torch.broadcast_to(deg, t.shape)
     if rand:
-        # randomly rotate and flip
+        # randomly rotate.py and flip
         mask = torch.rand_like(t0[..., 0]) > 0.5
         deg = deg + 2 * torch.pi * torch.rand_like(deg[..., 0])[..., None]
         deg = torch.where(mask[..., None], deg, torch.pi * 5 / 3 - deg)
     else:
-        # rotate 30 degree and flip every other pattern
+        # rotate.py 30 degree and flip every other pattern
         mask = torch.arange(t.shape[-2], device=tdist.device) % 2 == 0
         mask = torch.broadcast_to(mask, t.shape[:-1])
         deg = torch.where(mask[..., None], deg, deg + torch.pi / 6)

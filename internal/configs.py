@@ -26,7 +26,7 @@ class Config:
     seed = 0
     dataset_loader: str = 'llff'  # The type of dataset loader to use.
     batching: str = 'all_images'  # Batch composition, [single_image, all_images].
-    batch_size: int = 2 ** 16  # The number of rays/pixels in each batch.
+    batch_size: int = 8192  # The number of rays/pixels in each batch.
     patch_size: int = 1  # Resolution of patches sampled for training batches.
     factor: int = 4  # The downsample factor of images, 0 for no downsampling.
     multiscale: bool = False  # use multiscale data for training.
@@ -48,7 +48,7 @@ class Config:
     exp_name: str = "test"  # experiment name
     data_dir: Optional[str] = "/SSD_DISK/datasets/360_v2/bicycle"  # Input data directory.
     vocab_tree_path: Optional[str] = None  # Path to vocab tree for COLMAP.
-    render_chunk_size: int = 65536  # Chunk size for whole-image renderings.
+    render_chunk_size: int = 8192  # Chunk size for whole-image renderings.
     num_showcase_images: int = 5  # The number of test-set images to showcase.
     deterministic_showcase: bool = True  # If True, showcase the same images.
     vis_num_rays: int = 16  # The number of rays to visualize.
@@ -56,14 +56,14 @@ class Config:
     vis_decimate: int = 0
 
     # Only used by train.py:
-    max_steps: int = 25000  # The number of optimization steps.
+    max_steps: int = 50000  # The number of optimization steps.
     early_exit_steps: Optional[int] = None  # Early stopping, for debugging.
-    checkpoint_every: int = 5000  # The number of steps to save a checkpoint.
+    checkpoint_every: int = 10000  # The number of steps to save a checkpoint.
     resume_from_checkpoint: bool = True  # whether to resume from checkpoint.
     checkpoints_total_limit: int = 1
     gradient_scaling: bool = False  # If True, scale gradients as in https://gradient-scaling.github.io/.
     print_every: int = 100  # The number of steps between reports to tensorboard.
-    train_render_every: int = 500  # Steps between test set renders when training
+    train_render_every: int = 10000  # Steps between test set renders when training
     data_loss_type: str = 'charb'  # What kind of loss to use ('mse' or 'charb').
     charb_padding: float = 0.001  # The padding used for Charbonnier loss.
     data_loss_mult: float = 1.0  # Mult for the finest data term in the loss.
@@ -117,7 +117,7 @@ class Config:
     render_spherical: bool = False  # Render spherical 360 panoramas.
     render_save_async: bool = True  # Save to CNS using a separate thread.
 
-    render_spline_keyframes: Optional[str] = None  # Text file containing names of
+    render_spline_keyframes: Optional[str] = '/media/kim/HDD/mcj/zipnerf/my_data/statue_0914/path' #'/media/kim/HDD/mcj/zipnerf/my_data/statue_0921/path'  # Text file containing names of
     # images to be used as spline
     # keyframes, OR directory
     # containing those images.

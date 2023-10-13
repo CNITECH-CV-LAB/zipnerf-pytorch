@@ -8,10 +8,10 @@ from internal import configs
 from internal import image as lib_image
 from internal import raw_utils
 from internal import utils
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import numpy as np
 import cv2
-from PIL import Image
+
 import torch
 from tqdm import tqdm
 # This is ugly, but it works.
@@ -32,6 +32,7 @@ def load_dataset(split, train_dir, config: configs.Config):
         dataset_dict = {
             'blender': Blender,
             'llff': LLFF,
+            'cc': CC,
             'tat_nerfpp': TanksAndTemplesNerfPP,
             'tat_fvs': TanksAndTemplesFVS,
             'dtu': DTU,
@@ -129,7 +130,129 @@ class NeRFSceneManager(pycolmap.SceneManager):
             params['k3'] = cam.k3
             params['k4'] = cam.k4
             camtype = camera_utils.ProjectionType.FISHEYE
+        #image_names, poses, pixtocam, distortion_params, camtype
+        return names, poses, pixtocam, params, camtype
 
+
+import glob
+import xml.etree.ElementTree as ET
+
+class Image:
+    def __init__(self, name_, camera_id_, q_, tvec_, rotation_=None):
+        self.name = name_
+        self.camera_id = camera_id_
+        self.q = q_
+        self.tvec = tvec_
+        self.rotation = rotation_
+        self.points2D = np.empty((0, 2), dtype=np.float64)
+        self.point3D_ids = np.empty((0,), dtype=np.uint64)
+
+class CCposeLoader():
+    """contextcapture pose loader.
+
+  Minor NeRF-specific extension to the third_party Python COLMAP loader:
+  google3/third_party/py/pycolmap/scene_manager.py
+  """
+
+    def process(self, data_dir):
+        """Applies NeRF-specific postprocessing to the loaded pose data.
+
+    Returns:
+      a tuple [image_names, poses, pixtocam, distortion_params].
+      image_names:  contains the only the basename of the images.
+      poses: [N, 4, 4] array containing the camera to world matrices.
+      pixtocam: [N, 3, 3] array containing the camera to pixel space matrices.
+      distortion_params: mapping of distortion param name to distortion
+        parameters. Cameras share intrinsics. Valid keys are k1, k2, p1 and p2.
+    """
+
+
+        # self.load_points3D()  # For now, we do not need the point cloud data.
+        tree = ET.parse(data_dir + '/cc_pose.xml')  # 解析读取xml函数
+        camera_id = int(tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('Name').text.split(' ')[-1])
+        focal_length = float(
+            tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('FocalLengthPixels').text)
+        cx = float(
+            tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('PrincipalPoint').find('x').text)
+        cy = float(
+            tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('PrincipalPoint').find('y').text)
+        # Assume shared intrinsics between all cameras.
+        #cam = self.cameras[1]
+        fx = focal_length
+        fy = focal_length
+
+
+        pixtocam = np.linalg.inv(camera_utils.intrinsic_matrix(fx, fy, cx, cy))
+        images = OrderedDict()
+        name_to_image_id = dict()
+
+        last_image_id = 0
+        for photo in tree.getroot().find('Block').find('Photogroups').find('Photogroup').findall('Photo'):
+            pose_rotate_temp = []
+            img_name = photo.find('ImagePath').text.split('/')[-1]
+            trans_x = float(photo.find('Pose').find('Center').find('x').text)
+            trans_y = float(photo.find('Pose').find('Center').find('y').text)
+            trans_z = float(photo.find('Pose').find('Center').find('z').text)
+            pose_trans_temp = (trans_x, trans_y, trans_z)
+            pose_rotate_temp.append(float(photo.find('Pose').find('Rotation').find('M_00').text))
+            pose_rotate_temp.append(float(photo.find('Pose').find('Rotation').find('M_10').text))
+            pose_rotate_temp.append(float(photo.find('Pose').find('Rotation').find('M_20').text))
+            pose_rotate_temp.append(float(photo.find('Pose').find('Rotation').find('M_01').text))
+            pose_rotate_temp.append(float(photo.find('Pose').find('Rotation').find('M_11').text))
+            pose_rotate_temp.append(float(photo.find('Pose').find('Rotation').find('M_21').text))
+            pose_rotate_temp.append(float(photo.find('Pose').find('Rotation').find('M_02').text))
+            pose_rotate_temp.append(float(photo.find('Pose').find('Rotation').find('M_12').text))
+            pose_rotate_temp.append(float(photo.find('Pose').find('Rotation').find('M_22').text))
+            np_pose_rotate = np.array(pose_rotate_temp).reshape(3, 3).transpose()  # 3*3
+            np_pose_trans = np.array(pose_trans_temp)  # 3*1
+            np_pose_trans = -np.matmul(np_pose_rotate, np_pose_trans)  # 3*1
+            image_id = int(photo.find('Id').text)
+            image = Image(img_name, camera_id,
+                          None, np_pose_trans, np_pose_rotate)
+            images[image_id] = image
+            name_to_image_id[image.name] = image_id
+
+            last_image_id = max(last_image_id, image_id)
+
+        # Extract extrinsic matrices in world-to-camera format.
+        imdata = images
+        w2c_mats = []
+        bottom = np.array([0, 0, 0, 1]).reshape(1, 4)
+        for k in imdata:
+            im = imdata[k]
+            rot = im.rotation
+            trans = im.tvec.reshape(3, 1)
+            w2c = np.concatenate([np.concatenate([rot, trans], 1), bottom], axis=0)
+            w2c_mats.append(w2c)
+        w2c_mats = np.stack(w2c_mats, axis=0)
+
+        # Convert extrinsics to camera-to-world.
+        c2w_mats = np.linalg.inv(w2c_mats)
+        poses = c2w_mats[:, :3, :4]
+
+        # Image names from COLMAP. No need for permuting the poses according to
+        # image names anymore.
+        names = [imdata[k].name for k in imdata]
+
+        # Switch from COLMAP (right, down, fwd) to NeRF (right, up, back) frame.
+        poses = poses @ np.diag([1, -1, -1, 1])
+
+        # Get distortion parameters.
+
+        params = {k: 0. for k in ['k1', 'k2', 'k3', 'p1', 'p2']}
+        params['k1'] = float(
+            tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('Distortion').find('K1').text)
+        params['k2'] = float(
+            tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('Distortion').find('K2').text)
+        params['k3'] = float(
+            tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('Distortion').find('K3').text)
+        params['p1'] = float(
+            tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('Distortion').find('P1').text)
+        params['p2'] = float(
+            tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('Distortion').find('P2').text)
+        camtype = camera_utils.ProjectionType.PERSPECTIVE
+
+        #image_names, poses, pixtocam, distortion_params, camtype
         return names, poses, pixtocam, params, camtype
 
 
@@ -678,7 +801,165 @@ class LLFF(Dataset):
         self.camtoworlds = self.render_poses if config.render_path else poses
         self.height, self.width = images.shape[1:3]
 
+class CC(Dataset):
+    """CC Dataset."""
 
+    def _load_renderings(self, config):
+        """Load images from disk."""
+        # Set up scaling factor.
+        image_dir_suffix = ''
+        # Use downsampling factor (unless loading training split for raw dataset,
+        # we train raw at full resolution because of the Bayer mosaic pattern).
+        if config.factor > 0 and not (config.rawnerf_mode and
+                                      self.split == utils.DataSplit.TRAIN):
+            image_dir_suffix = f'_{config.factor}'
+            factor = config.factor
+        else:
+            factor = 1
+
+        # Copy COLMAP data to local disk for faster loading.
+        colmap_dir = os.path.join(self.data_dir, 'sparse/0/')
+
+        # Load poses.
+        if utils.file_exists(colmap_dir):
+            print(self.data_dir)
+            pose_data = CCposeLoader().process(self.data_dir)
+        else:
+            # # Attempt to load Blender/NGP format if COLMAP data not present.
+            # pose_data = load_blender_posedata(self.data_dir)
+            raise ValueError('COLMAP data not found.')
+        image_names, poses, pixtocam, distortion_params, camtype = pose_data
+
+        # Previous NeRF results were generated with images sorted by filename,
+        # use this flag to ensure metrics are reported on the same test set.
+        inds = np.argsort(image_names)
+        image_names = [image_names[i] for i in inds]
+        poses = poses[inds]
+
+        # Load bounds if possible (only used in forward facing scenes).
+        posefile = os.path.join(self.data_dir, 'poses_bounds.npy')
+        if utils.file_exists(posefile):
+            with utils.open_file(posefile, 'rb') as fp:
+                poses_arr = np.load(fp)
+            bounds = poses_arr[:, -2:]
+        else:
+            bounds = np.array([0.01, 1.])
+        self.colmap_to_world_transform = np.eye(4)
+
+        # Scale the inverse intrinsics matrix by the image downsampling factor.
+        pixtocam = pixtocam @ np.diag([factor, factor, 1.])
+        self.pixtocams = pixtocam.astype(np.float32)
+        self.focal = 1. / self.pixtocams[0, 0]
+        self.distortion_params = distortion_params
+        self.camtype = camtype
+
+        # Separate out 360 versus forward facing scenes.
+        if config.forward_facing:
+            # Set the projective matrix defining the NDC transformation.
+            self.pixtocam_ndc = self.pixtocams.reshape(-1, 3, 3)[0]
+            # Rescale according to a default bd factor.
+            scale = 1. / (bounds.min() * .75)
+            poses[:, :3, 3] *= scale
+            self.colmap_to_world_transform = np.diag([scale] * 3 + [1])
+            bounds *= scale
+            # Recenter poses.
+            poses, transform = camera_utils.recenter_poses(poses)
+            self.colmap_to_world_transform = (
+                    transform @ self.colmap_to_world_transform)
+            # Forward-facing spiral render path.
+            self.render_poses = camera_utils.generate_spiral_path(
+                poses, bounds, n_frames=config.render_path_frames)
+        else:
+            # Rotate/scale poses to align ground with xy plane and fit to unit cube.
+            poses, transform = camera_utils.transform_poses_pca(poses)
+            self.colmap_to_world_transform = transform
+            if config.render_spline_keyframes is not None:
+                rets = camera_utils.create_render_spline_path(config, image_names,
+                                                              poses, self.exposures)
+                self.spline_indices, self.render_poses, self.render_exposures = rets
+            else:
+                # Automatically generated inward-facing elliptical render path.
+                self.render_poses = camera_utils.generate_ellipse_path(
+                    poses,
+                    n_frames=config.render_path_frames,
+                    z_variation=config.z_variation,
+                    z_phase=config.z_phase)
+
+        # Select the split.
+        all_indices = np.arange(len(image_names))
+        if config.llff_use_all_images_for_training:
+            train_indices = all_indices
+        else:
+            train_indices = all_indices % config.llffhold != 0
+        if config.llff_use_all_images_for_testing:
+            test_indices = all_indices
+        else:
+            test_indices = all_indices % config.llffhold == 0
+        split_indices = {
+            utils.DataSplit.TEST: all_indices[test_indices],
+            utils.DataSplit.TRAIN: all_indices[train_indices],
+        }
+        indices = split_indices[self.split]
+        image_names = [image_names[i] for i in indices]
+        poses = poses[indices]
+        # if self.split == utils.DataSplit.TRAIN:
+        #     # load different training data on different rank
+        #     local_indices = [i for i in range(len(image_names)) if (i + self.global_rank) % self.world_size == 0]
+        #     image_names = [image_names[i] for i in local_indices]
+        #     poses = poses[local_indices]
+        #     indices = local_indices
+
+        raw_testscene = False
+        if config.rawnerf_mode:
+            # Load raw images and metadata.
+            images, metadata, raw_testscene = raw_utils.load_raw_dataset(
+                self.split,
+                self.data_dir,
+                image_names,
+                config.exposure_percentile,
+                factor)
+            self.metadata = metadata
+
+        else:
+            # Load images.
+            colmap_image_dir = os.path.join(self.data_dir, 'images')
+            image_dir = os.path.join(self.data_dir, 'images' + image_dir_suffix)
+            for d in [image_dir, colmap_image_dir]:
+                if not utils.file_exists(d):
+                    raise ValueError(f'Image folder {d} does not exist.')
+            # Downsampled images may have different names vs images used for COLMAP,
+            # so we need to map between the two sorted lists of files.
+            colmap_files = sorted(utils.listdir(colmap_image_dir))
+            image_files = sorted(utils.listdir(image_dir))
+            colmap_to_image = dict(zip(colmap_files, image_files))
+            image_paths = [os.path.join(image_dir, colmap_to_image[f])
+                           for f in image_names]
+            images = [utils.load_img(x) for x in tqdm(image_paths, desc='Loading LLFF dataset', disable=self.global_rank != 0, leave=False)]
+            images = np.stack(images, axis=0) / 255.
+
+            # EXIF data is usually only present in the original JPEG images.
+            jpeg_paths = [os.path.join(colmap_image_dir, f) for f in image_names]
+            exifs = [utils.load_exif(x) for x in jpeg_paths]
+            self.exifs = exifs
+            if 'ExposureTime' in exifs[0] and 'ISOSpeedRatings' in exifs[0]:
+                gather_exif_value = lambda k: np.array([float(x[k]) for x in exifs])
+                shutters = gather_exif_value('ExposureTime')
+                isos = gather_exif_value('ISOSpeedRatings')
+                self.exposures = shutters * isos / 1000.
+
+        if raw_testscene:
+            # For raw testscene, the first image sent to COLMAP has the same pose as
+            # the ground truth test image. The remaining images form the training set.
+            raw_testscene_poses = {
+                utils.DataSplit.TEST: poses[:1],
+                utils.DataSplit.TRAIN: poses[1:],
+            }
+            poses = raw_testscene_poses[self.split]
+
+        self.poses = poses
+        self.images = images
+        self.camtoworlds = self.render_poses if config.render_path else poses
+        self.height, self.width = images.shape[1:3]
 class TanksAndTemplesNerfPP(Dataset):
     """Subset of Tanks and Temples Dataset as processed by NeRF++."""
 
