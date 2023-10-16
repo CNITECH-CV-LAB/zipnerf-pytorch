@@ -4,7 +4,7 @@ Config.near = 0.2
 Config.far = 30
 Config.factor = 4
 Config.data_dir = 'my_data/statue_0914'
-Config.exp_name = 'statue_0914_1013'
+Config.exp_name = 'statue_0914_colmap'
 
 Model.raydist_fn = 'power_transformation'
 Model.opaque_background = True

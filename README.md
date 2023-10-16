@@ -141,9 +141,9 @@ tensorboard --logdir "exp/${EXP_NAME}"
 ### Render
 Rendering results can be found in the directory `exp/${EXP_NAME}/render`
 ```
-
+# ffmpeg -i vid1.mp4 -vf "transpose=1" vid1-output.mp4
 DATA_DIR=my_data/statue_0914
-EXP_NAME=statue_0914_1013
+EXP_NAME=statue_0914_colmap
 PATH_DIR=my_data/statue_0914/path
 accelerate launch render.py \
     --gin_configs=configs/360.gin \

@@ -58,7 +58,7 @@ class Config:
     # Only used by train.py:
     max_steps: int = 50000  # The number of optimization steps.
     early_exit_steps: Optional[int] = None  # Early stopping, for debugging.
-    checkpoint_every: int = 10000  # The number of steps to save a checkpoint.
+    checkpoint_every: int = 5000  # The number of steps to save a checkpoint.
     resume_from_checkpoint: bool = True  # whether to resume from checkpoint.
     checkpoints_total_limit: int = 1
     gradient_scaling: bool = False  # If True, scale gradients as in https://gradient-scaling.github.io/.

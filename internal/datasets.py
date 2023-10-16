@@ -11,7 +11,7 @@ from internal import utils
 from collections import defaultdict, OrderedDict
 import numpy as np
 import cv2
-
+from PIL import Image
 import torch
 from tqdm import tqdm
 # This is ugly, but it works.
@@ -137,7 +137,7 @@ class NeRFSceneManager(pycolmap.SceneManager):
 import glob
 import xml.etree.ElementTree as ET
 
-class Image:
+class ImageCC:
     def __init__(self, name_, camera_id_, q_, tvec_, rotation_=None):
         self.name = name_
         self.camera_id = camera_id_
@@ -207,7 +207,7 @@ class CCposeLoader():
             np_pose_trans = np.array(pose_trans_temp)  # 3*1
             np_pose_trans = -np.matmul(np_pose_rotate, np_pose_trans)  # 3*1
             image_id = int(photo.find('Id').text)
-            image = Image(img_name, camera_id,
+            image = ImageCC(img_name, camera_id,
                           None, np_pose_trans, np_pose_rotate)
             images[image_id] = image
             name_to_image_id[image.name] = image_id
