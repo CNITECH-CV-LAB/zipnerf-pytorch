@@ -170,16 +170,28 @@ class CCposeLoader():
         # self.load_points3D()  # For now, we do not need the point cloud data.
         tree = ET.parse(data_dir + '/cc_pose.xml')  # 解析读取xml函数
         camera_id = int(tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('Name').text.split(' ')[-1])
-        focal_length = float(
-            tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('FocalLengthPixels').text)
+        if tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('FocalLengthPixels') is not None:
+            focal_length_pixels = float(
+                tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('FocalLengthPixels').text)
+        else:
+            # Focal length in pixels的计算方法
+            # https://blog.csdn.net/qq_39861441/article/details/114980443
+            focal_length = float(
+                tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('FocalLength').text)
+            sensor_size = float(
+                tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('SensorSize').text)
+            width = float(
+                tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('ImageDimensions').find('Width').text)
+            focal_length_pixels = width * focal_length / sensor_size
+
         cx = float(
             tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('PrincipalPoint').find('x').text)
         cy = float(
             tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('PrincipalPoint').find('y').text)
         # Assume shared intrinsics between all cameras.
         #cam = self.cameras[1]
-        fx = focal_length
-        fy = focal_length
+        fx = focal_length_pixels
+        fy = focal_length_pixels
 
 
         pixtocam = np.linalg.inv(camera_utils.intrinsic_matrix(fx, fy, cx, cy))
@@ -239,18 +251,29 @@ class CCposeLoader():
 
         # Get distortion parameters.
 
-        params = {k: 0. for k in ['k1', 'k2', 'k3', 'p1', 'p2']}
-        params['k1'] = float(
-            tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('Distortion').find('K1').text)
-        params['k2'] = float(
-            tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('Distortion').find('K2').text)
-        params['k3'] = float(
-            tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('Distortion').find('K3').text)
-        params['p1'] = float(
-            tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('Distortion').find('P1').text)
-        params['p2'] = float(
-            tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('Distortion').find('P2').text)
-        camtype = camera_utils.ProjectionType.PERSPECTIVE
+        camtype = tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('CameraModelType').text.lower()
+
+        if camtype == camera_utils.ProjectionType.PERSPECTIVE.value:
+            params = {k: 0. for k in ['k1', 'k2', 'k3', 'p1', 'p2']}
+            # params['k1'] = float(
+            #     tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('Distortion').find('K1').text)
+            # params['k2'] = float(
+            #     tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('Distortion').find('K2').text)
+            # params['k3'] = float(
+            #     tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('Distortion').find('K3').text)
+            # params['p1'] = float(
+            #     tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('Distortion').find('P1').text)
+            # params['p2'] = float(
+            #     tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('Distortion').find('P2').text)
+        else:
+            params = {k: 0. for k in [ 'p1', 'p2']}
+            params['p1'] = float(
+                tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('FisheyeDistortion').find('P1').text)
+            params['p2'] = float(
+                tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('FisheyeDistortion').find('P2').text)
+
+
+
 
         #image_names, poses, pixtocam, distortion_params, camtype
         return names, poses, pixtocam, params, camtype
@@ -818,16 +841,16 @@ class CC(Dataset):
             factor = 1
 
         # Copy COLMAP data to local disk for faster loading.
-        colmap_dir = os.path.join(self.data_dir, 'sparse/0/')
+        cc_file_dir = os.path.join(self.data_dir, 'cc_pose.xml')
 
         # Load poses.
-        if utils.file_exists(colmap_dir):
+        if utils.file_exists(cc_file_dir):
             print(self.data_dir)
             pose_data = CCposeLoader().process(self.data_dir)
         else:
             # # Attempt to load Blender/NGP format if COLMAP data not present.
             # pose_data = load_blender_posedata(self.data_dir)
-            raise ValueError('COLMAP data not found.')
+            raise ValueError('cc pose data not found.')
         image_names, poses, pixtocam, distortion_params, camtype = pose_data
 
         # Previous NeRF results were generated with images sorted by filename,

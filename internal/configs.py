@@ -104,7 +104,7 @@ class Config:
     # Only used by render.py
     render_video_fps: int = 60  # Framerate in frames-per-second.
     render_video_crf: int = 18  # Constant rate factor for ffmpeg video quality.
-    render_path_frames: int = 120  # Number of frames in render path.
+    render_path_frames: int = 480  # Number of frames in render path.
     z_variation: float = 0.  # How much height variation in render path.
     z_phase: float = 0.  # Phase offset for height variation in render path.
     render_dist_percentile: float = 0.5  # How much to trim from near/far planes.
@@ -117,7 +117,7 @@ class Config:
     render_spherical: bool = False  # Render spherical 360 panoramas.
     render_save_async: bool = True  # Save to CNS using a separate thread.
 
-    render_spline_keyframes: Optional[str] = '/media/kim/HDD/mcj/zipnerf/my_data/statue_0914/path' #'/media/kim/HDD/mcj/zipnerf/my_data/statue_0921/path'  # Text file containing names of
+    render_spline_keyframes: Optional[str] = None #'/media/kim/HDD/mcj/zipnerf/my_data/statue_0921/path'  # Text file containing names of
     # images to be used as spline
     # keyframes, OR directory
     # containing those images.

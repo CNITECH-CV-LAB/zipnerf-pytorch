@@ -147,9 +147,9 @@ EXP_NAME=statue_0914_colmap
 PATH_DIR=my_data/statue_0914/path
 accelerate launch render.py \
     --gin_configs=configs/360.gin \
+    --gin_bindings="Config.render_path = True" \
     --gin_bindings="Config.data_dir = '${DATA_DIR}'" \
     --gin_bindings="Config.exp_name = '${EXP_NAME}'" \
-    --gin_bindings="Config.render_path = True" \
     --gin_bindings="Config.render_path_frames = 180" \
     --gin_bindings="Config.render_video_fps = 30" \
     --gin_bindings="Config.factor = 4" \
@@ -213,7 +213,7 @@ More details can be found at https://github.com/google-research/multinerf
 #ldd /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/libfreeimage.so.3
 
 sudo ln -sf /usr/lib/x86_64-linux-gnu/libjpeg.so.8.2.2 /usr/local/lib/libjpeg.so.8
-DATA_DIR=my_data/statue_0914
+DATA_DIR=my_data/Fly_cc
 bash scripts/local_colmap_and_resize.sh ${DATA_DIR}
 ```
 
