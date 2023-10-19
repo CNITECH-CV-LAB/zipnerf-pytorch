@@ -93,7 +93,7 @@ class CCposeLoader():
         }
 
         # 打开文件并写入数据
-        with open('cameras.txt', 'w') as file:
+        with open('../scripts/cameras.txt', 'w') as file:
             file.write("# Camera list with one line of data per camera:\n")
             file.write("#   CAMERA_ID, MODEL, WIDTH, HEIGHT, PARAMS[]\n")
             file.write("# Number of cameras: 1\n")
@@ -145,5 +145,5 @@ class CCposeLoader():
 
 
 if __name__ == '__main__':
-    CCposeLoader.process("/media/kim/HDD/mcj/zipnerf/my_data/statue_0914")
+    CCposeLoader.process("/my_data/statue_0914")
 
