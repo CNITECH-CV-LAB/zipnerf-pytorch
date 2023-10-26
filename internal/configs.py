@@ -56,7 +56,7 @@ class Config:
     vis_decimate: int = 0
 
     # Only used by train.py:
-    max_steps: int = 50000  # The number of optimization steps.
+    max_steps: int = 200000  # The number of optimization steps.
     early_exit_steps: Optional[int] = None  # Early stopping, for debugging.
     checkpoint_every: int = 5000  # The number of steps to save a checkpoint.
     resume_from_checkpoint: bool = True  # whether to resume from checkpoint.
@@ -102,9 +102,9 @@ class Config:
     eval_crop_borders: int = 0  # Ignore c border pixels in eval (x[c:-c, c:-c]).
 
     # Only used by render.py
-    render_video_fps: int = 60  # Framerate in frames-per-second.
+    render_video_fps: int = 30  # Framerate in frames-per-second.
     render_video_crf: int = 18  # Constant rate factor for ffmpeg video quality.
-    render_path_frames: int = 480  # Number of frames in render path.
+    render_path_frames: int = 180  # Number of frames in render path.
     z_variation: float = 0.  # How much height variation in render path.
     z_phase: float = 0.  # Phase offset for height variation in render path.
     render_dist_percentile: float = 0.5  # How much to trim from near/far planes.
@@ -117,7 +117,7 @@ class Config:
     render_spherical: bool = False  # Render spherical 360 panoramas.
     render_save_async: bool = True  # Save to CNS using a separate thread.
 
-    render_spline_keyframes: Optional[str] = None #'/media/kim/HDD/mcj/zipnerf/my_data/statue_0921/path'  # Text file containing names of
+    render_spline_keyframes: Optional[str] = '/media/kim/HDD/mcj/zipnerf/my_data/balcony/path'#'/media/kim/HDD/mcj/zipnerf/my_data/statue_0921/path'  # Text file containing names of
     # images to be used as spline
     # keyframes, OR directory
     # containing those images.
