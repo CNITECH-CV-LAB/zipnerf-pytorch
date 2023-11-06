@@ -54,7 +54,7 @@ class CCposeLoader():
     @staticmethod
     def process(data_dir):
 
-        folder_path = '../my_data/Fly/sparse/0/'  # 指定新文件夹的路径
+        folder_path = data_dir +'/sparse/0/'  # 指定新文件夹的路径
 
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
@@ -62,18 +62,18 @@ class CCposeLoader():
         else:
             print("文件夹已存在！")
 
-        with open('../my_data/Fly/sparse/0/cameras.txt', 'a') as file:
+        with open(data_dir +'/sparse/0/cameras.txt', 'a') as file:
             file.write("# Camera list with one line of data per camera:\n")
             file.write("#   CAMERA_ID, MODEL, WIDTH, HEIGHT, PARAMS[]\n")
             file.write("# Number of cameras: 4\n")
 
-        with open('../my_data/Fly/sparse/0/images.txt', 'a') as file:
+        with open(data_dir +'/sparse/0/images.txt', 'a') as file:
             file.write("# Image list with two lines of data per image:\n")
             file.write("#   IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, NAME\n")
             file.write("#   POINTS2D[] as (X, Y, POINT3D_ID)\n")
             file.write("# Number of images: 200, mean observations per image: 0\n") #这里还得改
 
-        with open('../my_data/Fly/sparse/0/points3D.txt', 'a') as file:
+        with open(data_dir +'/sparse/0/points3D.txt', 'a') as file:
             file.write("# 3D point list with one line of data per point:\n")
             file.write("#   POINT3D_ID, X, Y, Z, R, G, B, ERROR, TRACK[] as (IMAGE_ID, POINT2D_IDX)\n")
             file.write("# Number of points: 0, mean track length: 0\n")
@@ -85,6 +85,7 @@ class CCposeLoader():
         for photogroup in tree.getroot().find('Block').find('Photogroups').findall('Photogroup'):
             camera_id = int(photogroup.find('Name').text.split(' ')[-1])
             camtype = tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('CameraModelType').text.lower()
+            camtype = 'CONTEXT'
             width = int(
                 photogroup.find('ImageDimensions').find('Width').text)
             height = int(
@@ -101,7 +102,7 @@ class CCposeLoader():
                     photogroup.find('SensorSize').text)
                 width = float(
                     photogroup.find('ImageDimensions').find('Width').text)
-                focal_length_pixels = width * focal_length / sensor_size
+                focal_length_pixels = float(width * focal_length / sensor_size)
 
             cx = float(
                 photogroup.find('PrincipalPoint').find('x').text)
@@ -109,7 +110,7 @@ class CCposeLoader():
                 photogroup.find('PrincipalPoint').find('y').text)
 
             # 只要k1,k2,详见https://www.jianshu.com/p/95cf3a63b6bb
-            if camtype == camera_utils.ProjectionType.PERSPECTIVE.value:
+            if camtype == 'CONTEXT': #camera_utils.ProjectionType.PERSPECTIVE.value:
                 params = {k: 0. for k in ['k1', 'k2', 'k3', 'p1', 'p2']}
                 # params['k1'] = float(
                 #     tree.getroot().find('Block').find('Photogroups').find('Photogroup').find('Distortion').find('K1').text)
@@ -141,7 +142,7 @@ class CCposeLoader():
             data = {
                 'camera_id': camera_id,
                 'camtype': camtype,
-                'width': width,
+                'width': int(width),
                 'height': height,
                 'focal_length': focal_length_pixels,
                 'cx': cx,
@@ -156,13 +157,13 @@ class CCposeLoader():
                 first_intrinsic = intrinsic
 
             # 打开文件并写入数据
-            with open('../my_data/Fly/sparse/0/cameras.txt', 'a') as file:
+            with open(data_dir +'/sparse/0/cameras.txt', 'a') as file:
                 file.write(
-                    f"{data['camera_id']} {data['camtype']} {data['width']} {data['height']} {data['focal_length']} {data['cx']} {data['cy']} {params['k1']} {params['k2']} {params['p1']} {params['p2']}\n")
+                    f"{data['camera_id']} {data['camtype']} {data['width']} {data['height']} {data['focal_length']} {data['cx']} {data['cy']} {params['k1']} {params['k2']} {params['p1']} {params['p2']} \n")
                 #
 
 
-            with open('../my_data/Fly/sparse/0/images.txt', 'a') as file:
+            with open(data_dir +'/sparse/0/images.txt', 'a') as file:
                 for photo in photogroup.findall('Photo'):
                     pose_rotate_temp = []
                     camera_id = int(
@@ -186,7 +187,8 @@ class CCposeLoader():
                     np_pose_trans = np.array(pose_trans_temp)  # 3*1
                     np_pose_trans = -np.matmul(np_pose_rotate, np_pose_trans)  # 3*1
                     # 计算 first_intrinsic 的逆矩阵
-                    first_intrinsic_inv = np.linalg.inv(first_intrinsic)
+                    #first_intrinsic_inv = np.linalg.inv(first_intrinsic)
+                    first_intrinsic_inv =np.linalg.inv(np.array([[2455.10220470433, 0, 4135], [0, 2455.10220470433, 2616], [0, 0, 1]]))
 
                     # 使用 @ 运算符进行矩阵乘法
                     np_pose_rotate = first_intrinsic_inv @ intrinsic @ np_pose_rotate
@@ -197,7 +199,7 @@ class CCposeLoader():
 
                     file.write(
                         f"{image_id} {q[0]} {q[1]} {q[2]} {q[3]} {np_pose_trans[0]} {np_pose_trans[1]} {np_pose_trans[2]} {camera_id} {img_name}\n")
-                    file.write('\n')
+                    file.write(' \n')
 
 
 

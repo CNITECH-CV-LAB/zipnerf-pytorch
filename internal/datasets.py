@@ -130,6 +130,14 @@ class NeRFSceneManager(pycolmap.SceneManager):
             params['k3'] = cam.k3
             params['k4'] = cam.k4
             camtype = camera_utils.ProjectionType.FISHEYE
+
+        elif type_ == 111 or type_ == 'CONTEXT':
+            params = {k: 0. for k in ['k1', 'k2', 'k3', 'p1', 'p2']}
+            params['k1'] = cam.k1
+            params['k2'] = cam.k2
+            params['p1'] = cam.p1
+            params['p2'] = cam.p2
+            camtype = camera_utils.ProjectionType.PERSPECTIVE
         #image_names, poses, pixtocam, distortion_params, camtype
         return names, poses, pixtocam, params, camtype
 

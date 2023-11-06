@@ -124,8 +124,7 @@ CUDA_VISIBLE_DEVICES=0 python train.py \
     --gin_configs=configs/360.gin \
     --gin_bindings="Config.data_dir = '${DATA_DIR}'" \
     --gin_bindings="Config.exp_name = '${EXP_NAME}'" \
-    --gin_bindings="Config.factor = 4" \
-    --gin_bindings="render_spline_keyframes = '${PATH_DIR}'" 
+    --gin_bindings="Config.factor = 4" 
 
 # alternatively you can use an example training script 
 bash scripts/train_360.sh
@@ -179,12 +178,13 @@ Mesh results can be found in the directory `exp/${EXP_NAME}/mesh`
 # more configuration can be found in internal/configs.py
 accelerate launch extract.py \
     --gin_configs=configs/360.gin \
+    --gin_bindings="Config.factor = 4"
+    --gin_bindings="Config.mesh_voxels="
     --gin_bindings="Config.data_dir = '${DATA_DIR}'" \
     --gin_bindings="Config.exp_name = '${EXP_NAME}'" \
-    --gin_bindings="Config.factor = 4"
 #    --gin_bindings="Config.mesh_radius = 1"  # (optional) smaller for more details e.g. 0.2 in bicycle scene
 #    --gin_bindings="Config.isosurface_threshold = 20"  # (optional) empirical value
-#    --gin_bindings="Config.mesh_voxels=134217728"  # (optional) number of voxels used to extract mesh, e.g. 134217728 equals to 512**3 . Smaller values may solve OutoFMemoryError
+#    --gin_bindings="Config.mesh_voxels=1000000"  # (optional) number of voxels used to extract mesh, e.g. 134217728 equals to 512**3 . Smaller values may solve OutoFMemoryError
 #    --gin_bindings="Config.vertex_color = True"  # (optional) saving mesh with vertex color instead of atlas which is much slower but with more details.
 #    --gin_bindings="Config.vertex_projection = True"  # (optional) use projection for vertex color
 
@@ -213,7 +213,7 @@ More details can be found at https://github.com/google-research/multinerf
 #ldd /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/libfreeimage.so.3
 
 sudo ln -sf /usr/lib/x86_64-linux-gnu/libjpeg.so.8.2.2 /usr/local/lib/libjpeg.so.8
-DATA_DIR=my_data/Fly_cc
+DATA_DIR=my_data/Fly
 bash scripts/local_colmap_and_resize.sh ${DATA_DIR}
 ```
 
