@@ -79,7 +79,7 @@ class CCposeLoader():
             file.write("# Number of points: 0, mean track length: 0\n")
 
 
-        tree = ET.parse(data_dir + '/cc_pose.xml')  # 解析读取xml函数
+        tree = ET.parse(data_dir + '/cc_pose_undistorted.xml')  # 解析读取xml函数
 
         first_intrinsic = None
         for photogroup in tree.getroot().find('Block').find('Photogroups').findall('Photogroup'):
@@ -188,11 +188,11 @@ class CCposeLoader():
                     np_pose_trans = -np.matmul(np_pose_rotate, np_pose_trans)  # 3*1
                     # 计算 first_intrinsic 的逆矩阵
                     #first_intrinsic_inv = np.linalg.inv(first_intrinsic)
-                    first_intrinsic_inv =np.linalg.inv(np.array([[2455.10220470433, 0, 4135], [0, 2455.10220470433, 2616], [0, 0, 1]]))
+                    #first_intrinsic_inv =np.linalg.inv(np.array([[2455.10220470433, 0, 4135], [0, 2455.10220470433, 2616], [0, 0, 1]]))
 
                     # 使用 @ 运算符进行矩阵乘法
-                    np_pose_rotate = first_intrinsic_inv @ intrinsic @ np_pose_rotate
-                    np_pose_trans = first_intrinsic_inv @ intrinsic @ np_pose_trans
+                    #np_pose_rotate = first_intrinsic_inv @ intrinsic @ np_pose_rotate
+                    #np_pose_trans = first_intrinsic_inv @ intrinsic @ np_pose_trans
 
                     image_id = int(photo.find('Id').text)
                     q = ImageCC.FromR(np_pose_rotate)
@@ -207,5 +207,5 @@ class CCposeLoader():
 
 
 if __name__ == '__main__':
-    CCposeLoader.process("../my_data/Fly")
+    CCposeLoader.process("../my_data/mcj1108")
 

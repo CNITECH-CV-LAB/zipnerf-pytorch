@@ -8,7 +8,7 @@ cameras = []
 
 
 def process(data_dir):
-    with open(data_dir + '/sparse/1/cameras.txt', 'r') as file:
+    with open(data_dir + '/sparse/0/cameras.txt', 'r') as file:
         lines = file.readlines()
         for line in lines[3:7]:
             camera_data = line.strip().split()
@@ -25,7 +25,7 @@ def process(data_dir):
     # 计算新相机的属性值
     new_camera = {
         'CAMERA_ID': 5,
-        'MODEL': 'perspective',
+        'MODEL': 'CONTEXT',
         'WIDTH': min(camera['WIDTH'] for camera in cameras),
         'HEIGHT': min(camera['HEIGHT'] for camera in cameras),
         'FOCAL_LENGTH': max(camera['FOCAL_LENGTH'] for camera in cameras),
@@ -35,9 +35,9 @@ def process(data_dir):
     cameras.append(new_camera)
 
     # cam1-4 图像文件夹路径
-    image_folder = data_dir + '/images'
+    image_folder = data_dir + '/images_undistorted'
     # 新文件夹路径
-    output_folder = image_folder + '/uniformed'
+    output_folder = data_dir + '/images'
     os.makedirs(output_folder, exist_ok=True)
     min_width = inf
     min_height = inf
@@ -49,8 +49,8 @@ def process(data_dir):
             cy = camera['CY']
 
             # 平移图像
-            tx = int(cx - camera['WIDTH'] / 2)
-            ty = int(cy - camera['HEIGHT'] / 2)
+            tx = int(cx - camera['WIDTH'] / 2)*2
+            ty = int(cy - camera['HEIGHT'] / 2)*2
 
             if tx >= 0:
                 crop_width = camera['WIDTH'] - tx
@@ -73,10 +73,12 @@ def process(data_dir):
     print(cameras[4]['WIDTH'])
     print(cameras[4]['HEIGHT'])
 
-    with open(data_dir + '/sparse/0/cameras1.txt', 'a') as file:
+    sparse_dir = os.path.join(data_dir, "sparse/0")
+    os.makedirs(sparse_dir, exist_ok=True)
+    with open(data_dir + '/sparse/0/cameras1.txt', 'w') as file:
         file.write("# Camera list with one line of data per camera:\n")
         file.write("#   CAMERA_ID, MODEL, WIDTH, HEIGHT, PARAMS[]\n")
-        file.write("# Number of cameras: 4\n")
+        file.write("# Number of cameras: 1\n")
         file.write(
             f"{cameras[4]['CAMERA_ID']} {cameras[4]['MODEL']} {cameras[4]['WIDTH']} {cameras[4]['HEIGHT']} {cameras[4]['FOCAL_LENGTH']} {cameras[4]['CX']} {cameras[4]['CY']} 0 0 0 0\n")
         #
@@ -130,4 +132,4 @@ def process(data_dir):
 
 
 if __name__ == '__main__':
-    process("../my_data/Fly")
+    process("../my_data/mcj1108")

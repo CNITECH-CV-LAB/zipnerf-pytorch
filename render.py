@@ -155,13 +155,11 @@ def main(unused_argv):
             if 'normals' in rendering:
                 utils.save_img_u8(rendering['normals'] / 2. + 0.5,
                                   path_fn(f'normals_{idx_str}.png'))
-            utils.save_img_f32(rendering['depth'],
-                               path_fn(f'depth_{idx_str}.tiff'))
-            # utils.save_img_f32(rendering['distance_mean'],
-            #                    path_fn(f'distance_mean_{idx_str}.tiff'))
+            utils.save_img_f32(rendering['distance_mean'],
+                               path_fn(f'distance_mean_{idx_str}.tiff'))
             utils.save_img_f32(rendering['distance_median'],
                                path_fn(f'distance_median_{idx_str}.tiff'))
-            # utils.save_img_f32(rendering['acc'], path_fn(f'acc_{idx_str}.tiff'))
+            utils.save_img_f32(rendering['acc'], path_fn(f'acc_{idx_str}.tiff'))
     num_files = len(glob.glob(path_fn('acc_*.tiff')))
     if accelerator.is_main_process and num_files == dataset.size:
         logger.info(f'All files found, creating videos.')

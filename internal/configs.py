@@ -56,14 +56,14 @@ class Config:
     vis_decimate: int = 0
 
     # Only used by train.py:
-    max_steps: int = 50000  # The number of optimization steps.
+    max_steps: int = 1000000  # The number of optimization steps.
     early_exit_steps: Optional[int] = None  # Early stopping, for debugging.
-    checkpoint_every: int = 5000  # The number of steps to save a checkpoint.
+    checkpoint_every: int = 10000  # The number of steps to save a checkpoint.
     resume_from_checkpoint: bool = True  # whether to resume from checkpoint.
-    checkpoints_total_limit: int = 1
+    checkpoints_total_limit: int = 2
     gradient_scaling: bool = False  # If True, scale gradients as in https://gradient-scaling.github.io/.
-    print_every: int = 100  # The number of steps between reports to tensorboard.
-    train_render_every: int = 1000  # Steps between test set renders when training
+    print_every: int = 200  # The number of steps between reports to tensorboard.
+    train_render_every: int = 2000  # Steps between test set renders when training
     data_loss_type: str = 'charb'  # What kind of loss to use ('mse' or 'charb').
     charb_padding: float = 0.001  # The padding used for Charbonnier loss.
     data_loss_mult: float = 1.0  # Mult for the finest data term in the loss.
@@ -166,7 +166,7 @@ def define_common_flags():
     flags.DEFINE_string('mode', None, 'Required by GINXM, not used.')
     flags.DEFINE_string('base_folder', None, 'Required by GINXM, not used.')
     flags.DEFINE_multi_string('gin_bindings', None, 'Gin parameter bindings.')
-    flags.DEFINE_multi_string('gin_configs', "configs/qsh.gin", 'Gin config files.')
+    flags.DEFINE_multi_string('gin_configs', None, 'Gin config files.')
 
 
 def load_config():
