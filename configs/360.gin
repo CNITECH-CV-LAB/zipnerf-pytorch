@@ -1,9 +1,11 @@
-Config.dataset_loader = 'cc'
+Config.dataset_loader = 'llff'
 Config.near = 0.2
-Config.far = 30
+Config.far = 1e2
 Config.factor = 4
-Config.data_dir = 'my_data/Fly_1017'
-Config.exp_name = 'Fly_cc_cc_1019'
+Config.data_dir = 'my_data/Fly'
+Config.exp_name = 'Fly_uniformed'
+Config.render_spline_keyframes = None
+
 
 
 Model.raydist_fn = 'power_transformation'

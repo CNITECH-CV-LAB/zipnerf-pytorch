@@ -119,6 +119,12 @@ class Camera:
             self.distortion_func = opencv_distortion
             self.camera_type = 4
 
+        elif type_ == 'CONTEXT':
+            self.fx, self.cx, self.cy, self.k1, self.k2, self.p1, self.p2 = params
+            self.fy = self.fx
+            self.distortion_func = radial_distortion
+            self.camera_type = 111
+
         else:
             raise Exception('Camera type not supported')
 

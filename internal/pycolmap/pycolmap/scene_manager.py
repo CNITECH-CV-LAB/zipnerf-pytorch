@@ -184,7 +184,7 @@ class SceneManager:
         with open(input_file, 'r') as f:
             is_camera_description_line = False
 
-            for line in iter(lambda: f.readline().strip(), ''):
+            for line in iter(lambda: f.readline(), ''):
                 if not line or line.startswith('#'):
                     continue
 
@@ -195,8 +195,8 @@ class SceneManager:
                 if is_camera_description_line:
                     image_id = int(data[0])
                     image = Image(data[-1], int(data[-2]),
-                                  Quaternion(np.array(map(float, data[1:5]))),
-                                  np.array(map(float, data[5:8])))
+                                  Quaternion(np.array(list(map(float, data[1:5])))),
+                                  np.array(list(map(float, data[5:8]))))
                 else:
                     image.points2D = np.array(
                         [map(float, data[::3]), map(float, data[1::3])]).T
